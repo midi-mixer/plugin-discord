@@ -1,31 +1,36 @@
 {
   "$schema": "./node_modules/midi-mixer-plugin/plugin.schema.json",
   "version": "1.0.0",
-  "id": "com.midi-mixer.template",
-  "name": "Template",
-  "main": "dist/index.html",
-  "dev": "http://localhost:3000",
-  "remote": "https://plugins.template.midi-mixer.com",
+  "id": "com.midi-mixer.discord",
+  "name": "Discord",
+  "type": "node",
+  "main": "lib/index.js",
+  "icon": "icon.svg",
   "settings": {
-    "url": {
-      "label": "URL",
+    "clientId": {
+      "label": "Client ID",
       "required": true,
       "type": "text"
     },
-    "password": {
-      "label": "Password",
+    "clientSecret": {
+      "label": "Client Secret",
       "required": true,
       "type": "password"
+    },
+    "presence": {
+      "label": "Presence (populate to disable)",
+      "type": "text",
+      "fallback": "On"
     },
     "status": {
       "label": "Status",
       "type": "status",
-      "fallback": "Not running"
+      "fallback": "Disconnected"
     },
-    "run": {
-      "label": "Run",
+    "reconnect": {
+      "label": "Reconnect",
       "type": "button"
     }
   },
-  "author": "Jack Williams"
+  "author": "MIDI Mixer"
 }
