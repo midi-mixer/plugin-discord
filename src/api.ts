@@ -1,5 +1,6 @@
-import { RPClient, VoiceSettings } from "rpcord";
+import RPC, { VoiceSettings } from "discord-rpc";
 import { Assignment, ButtonType } from "midi-mixer-plugin";
+import { config, Keys } from "./config";
 
 enum DiscordButton {
   ToggleAutomaticGainControl = "toggleAutomaticGainControl",
@@ -15,7 +16,7 @@ enum DiscordButton {
 
 enum DiscordFader {
   InputVolume = "inputVolume",
-  // OutputVolume = "outputVolume",
+  OutputVolume = "outputVolume",
   // VoiceActivityThreshold = "voiceActivityThreshold",
 }
 
@@ -28,19 +29,22 @@ export class DiscordApi {
   ];
   private static syncGap = 1000 * 30;
 
-  private rpc: RPClient;
+  private rpc: RPC.Client;
+  private clientId: string;
+  private clientSecret: string;
   private buttons: Record<DiscordButton, ButtonType> | null = null;
   private faders: Record<DiscordFader, Assignment> | null = null;
   private syncInterval: ReturnType<typeof setInterval> | null = null;
-  private settings?: VoiceSettings;
+  private settings?: RPC.VoiceSettings;
 
-  constructor(rpc: RPClient) {
+  constructor(rpc: RPC.Client, clientId: string, clientSecret: string) {
     this.rpc = rpc;
-    this.bootstrap();
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
   }
 
   public async disconnect(): Promise<void> {
-    this.rpc.disconnect();
+    await this.rpc.destroy();
 
     if (this.syncInterval) clearInterval(this.syncInterval);
 
@@ -48,11 +52,76 @@ export class DiscordApi {
     Object.values(this.faders ?? {}).forEach((fader) => void fader.remove());
   }
 
-  private async bootstrap() {
-    await this.rpc.connect();
-    await this.rpc.authorize(DiscordApi.scopes);
+  public async bootstrap(): Promise<void> {
+    $MM.setSettingsStatus("status", "Connecting to Discord...");
 
+    let authToken = "";
+
+    try {
+      [authToken] = await Promise.all([
+        new Promise<string>((resolve, reject) => {
+          try {
+            resolve(config.get(Keys.AuthToken) as string);
+          } catch (err) {
+            reject(err);
+          }
+        }),
+        this.rpc.connect(this.clientId),
+      ]);
+    } catch (err) {
+      console.error(err);
+
+      $MM.setSettingsStatus(
+        "status",
+        "Disconnected; couldn't find Discord running"
+      );
+
+      throw err;
+    }
+
+    if (authToken && typeof authToken === "string") {
+      $MM.setSettingsStatus(
+        "status",
+        "Logging in with existing credentials..."
+      );
+
+      try {
+        await this.rpc.login({
+          clientId: this.clientId,
+          accessToken: authToken,
+          scopes: DiscordApi.scopes,
+        });
+      } catch (err) {
+        console.warn(
+          "Failed to authorise using existing token; stripping from config"
+        );
+
+        config.delete(Keys.AuthToken);
+      }
+    }
+
+    const isAuthed = Boolean(this.rpc.application);
+
+    if (!isAuthed) {
+      try {
+        await this.authorize();
+      } catch (err) {
+        console.error(err);
+
+        return $MM.setSettingsStatus(
+          "status",
+          "User declined authorisation; cannot continue."
+        );
+      }
+    }
+
+    this.rpc.subscribe("VOICE_SETTINGS_UPDATE", (data: VoiceSettings) => {
+      this.sync(data);
+    });
+
+    $MM.setSettingsStatus("status", "Syncing voice settings...");
     this.settings = await this.rpc.getVoiceSettings();
+    $MM.setSettingsStatus("status", "Connected");
 
     this.buttons = {
       // [DiscordButton.ToggleAutoThreshold]: new ButtonType(
@@ -75,16 +144,12 @@ export class DiscordApi {
         DiscordButton.ToggleAutomaticGainControl,
         {
           name: "Toggle automatic gain control",
-          active: this.settings.automatic_gain_control,
+          active: this.settings.automaticGainControl,
         }
       ).on("pressed", async () => {
-        if (!this.settings) return;
-
-        const settings = await this.rpc.setVoiceSettings({
-          automatic_gain_control: !this.settings.automatic_gain_control,
+        await (this.rpc as any).setVoiceSettings({
+          automaticGainControl: !this.settings?.automaticGainControl,
         });
-
-        this.sync(settings);
       }),
     };
 
@@ -92,27 +157,98 @@ export class DiscordApi {
       [DiscordFader.InputVolume]: new Assignment(DiscordFader.InputVolume, {
         name: "Input volume",
         muted: this.settings.mute,
-      }).on("mutePressed", async () => {
-        if (!this.settings) return;
+        throttle: 150,
+      })
+        .on("mutePressed", async () => {
+          const currentState = Boolean(
+            this.settings?.mute || this.settings?.deaf
+          );
+          const muted = !currentState;
 
-        const settings = await this.rpc.setVoiceSettings({
-          mute: !this.settings.mute,
-        });
+          /**
+           * If we're unmuting our mic, make sure to undeafen too.
+           */
+          const args: Partial<VoiceSettings> = {
+            mute: muted,
+          };
 
-        this.sync(settings);
-      }),
+          if (!muted) args.deaf = muted;
+
+          await (this.rpc as any).setVoiceSettings(args);
+        })
+        .on("volumeChanged", async (level: number) => {
+          if (!this.faders) return;
+
+          this.faders[DiscordFader.InputVolume].volume = level;
+
+          await (this.rpc as any).setVoiceSettings({
+            input: {
+              volume: level * 100,
+            },
+          });
+        }),
+      [DiscordFader.OutputVolume]: new Assignment(DiscordFader.OutputVolume, {
+        name: "Output volume",
+        muted: this.settings.deaf,
+        throttle: 150,
+      })
+        .on("mutePressed", async () => {
+          await (this.rpc as any).setVoiceSettings({
+            deaf: !this.settings?.deaf,
+          });
+        })
+        .on("volumeChanged", async (level: number) => {
+          if (!this.faders) return;
+
+          this.faders[DiscordFader.OutputVolume].volume = level;
+
+          await (this.rpc as any).setVoiceSettings({
+            output: {
+              volume: level * 200,
+            },
+          });
+        }),
     };
 
     this.syncInterval = setInterval(() => void this.sync(), DiscordApi.syncGap);
     this.sync();
   }
 
+  /**
+   * Authorize with Discord, providing scopes and requesting an access token for
+   * future use.
+   */
+  private async authorize() {
+    $MM.setSettingsStatus("status", "Waiting for user authorisation...");
+
+    await this.rpc.login({
+      clientId: this.clientId,
+      clientSecret: this.clientSecret,
+      scopes: DiscordApi.scopes,
+      redirectUri: "http://localhost/",
+    } as any);
+
+    const accessToken = (this.rpc as any).accessToken;
+
+    if (!accessToken)
+      throw new Error("Logged in, but not access token available");
+
+    config.set(Keys.AuthToken, accessToken);
+  }
+
   private async sync(settings?: VoiceSettings) {
     this.settings = settings ?? (await this.rpc.getVoiceSettings());
-    if (!this.buttons) return;
 
-    this.buttons[
-      DiscordButton.ToggleAutomaticGainControl
-    ].active = this.settings.automatic_gain_control;
+    if (this.buttons) {
+      this.buttons[
+        DiscordButton.ToggleAutomaticGainControl
+      ].active = this.settings.automaticGainControl;
+    }
+
+    if (this.faders) {
+      this.faders[DiscordFader.InputVolume].muted =
+        this.settings.mute || this.settings.deaf;
+      this.faders[DiscordFader.OutputVolume].muted = this.settings.deaf;
+    }
   }
 }

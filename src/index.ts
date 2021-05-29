@@ -1,48 +1,67 @@
-import { Presence, RPClient } from "rpcord";
+import RPC from "discord-rpc";
 import "midi-mixer-plugin";
 import { DiscordApi } from "./api";
 
-let midiMixerRpc: RPClient | null = null;
+let midiMixerRpc: RPC.Client | null = null;
 let api: DiscordApi | null = null;
 
-const cleanUpConnections = () => {
-  if (midiMixerRpc) {
-    midiMixerRpc.disconnect();
-    midiMixerRpc = null;
-  }
+const cleanUpConnections = async () => {
+  await Promise.all([
+    new Promise<void>((resolve) => {
+      if (!midiMixerRpc) return resolve();
 
-  if (api) {
-    api.disconnect();
-    api = null;
-  }
+      midiMixerRpc.destroy().finally(() => {
+        midiMixerRpc = null;
+        resolve();
+      });
+    }),
+    new Promise<void>((resolve) => {
+      if (!api) return resolve();
+
+      api.disconnect().finally(() => {
+        api = null;
+        resolve();
+      });
+    }),
+  ]);
+
+  $MM.setSettingsStatus("status", "Disconnected");
 };
+
+$MM.onClose(async () => {
+  await cleanUpConnections();
+});
 
 const connectPresence = async () => {
   const midiMixerClientId = "802892683936268328";
 
-  midiMixerRpc = new RPClient(midiMixerClientId);
-  await midiMixerRpc.connect();
+  midiMixerRpc = new RPC.Client({
+    transport: "ipc",
+  });
 
-  await midiMixerRpc.setActivity(
-    new Presence()
-      .setDetails("Controlling volumes")
-      .setState("Using MIDI")
-      .setLargeImage("logo")
-      .setLargeText("MIDI Mixer")
-      .setStartTimestamp(Date.now())
-      .addButton({
+  await midiMixerRpc.connect(midiMixerClientId);
+
+  await midiMixerRpc.setActivity({
+    details: "Controlling volumes",
+    state: "Using MIDI",
+    largeImageKey: "logo",
+    largeImageText: "MIDI Mixer",
+    buttons: [
+      {
         label: "Get MIDI Mixer",
         url: "https://www.midi-mixer.com",
-      })
-  );
+      },
+    ],
+  });
 };
 
 const connect = async () => {
   /**
    * Disconnect any running instances.
    */
-  cleanUpConnections();
+  await cleanUpConnections();
 
+  $MM.setSettingsStatus("status", "Getting plugin settings...");
   const settings = await $MM.getSettings();
 
   const clientId = settings.clientId as string;
@@ -66,19 +85,18 @@ const connect = async () => {
     );
   }
 
-  const scopes = [
-    "rpc",
-    "rpc.activities.write",
-    "rpc.voice.read",
-    "rpc.voice.write",
-  ];
-
-  const rpc = new RPClient(clientId, {
-    secret: clientSecret,
-    scopes,
+  const rpc = new RPC.Client({
+    transport: "ipc",
   });
 
-  api = new DiscordApi(rpc);
+  api = new DiscordApi(rpc, clientId, clientSecret);
+
+  try {
+    await api.bootstrap();
+  } catch (err) {
+    console.error(err);
+    cleanUpConnections();
+  }
 };
 
 $MM.onSettingsButtonPress("reconnect", connect);
