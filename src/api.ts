@@ -9,7 +9,7 @@ enum DiscordButton {
   ToggleQos = "toggleQos",
   ToggleSilenceWarning = "toggleSilenceWarning",
   ToggleDeafen = "toggleDeafen",
-  // ToggleMute = "toggleMute",
+  ToggleMute = "toggleMute",
   // TogglePushToTalk = "togglePushToTalk",
   // ToggleAutoThreshold = "toggleAutoThreshold",
 }
@@ -140,6 +140,14 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleMute]: new ButtonType(DiscordButton.ToggleMute, {
+        name: "Toggle mute",
+        active: Boolean(this.settings.mute),
+      }).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          mute: !this.settings?.mute,
+        });
+      }),
       [DiscordButton.ToggleDeafen]: new ButtonType(DiscordButton.ToggleDeafen, {
         name: "Toggle deafen",
         active: Boolean(this.settings.deaf),
@@ -331,6 +339,9 @@ export class DiscordApi {
         boolSettings.silenceWarning;
 
       this.buttons[DiscordButton.ToggleDeafen].active = boolSettings.deaf;
+
+      this.buttons[DiscordButton.ToggleMute].active =
+        boolSettings.mute || boolSettings.deaf;
     }
 
     if (this.faders) {
