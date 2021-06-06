@@ -8,7 +8,7 @@ enum DiscordButton {
   ToggleNoiseSuppression = "toggleNoiseSuppression",
   ToggleQos = "toggleQos",
   ToggleSilenceWarning = "toggleSilenceWarning",
-  // ToggleDeafen = "toggleDeafen",
+  ToggleDeafen = "toggleDeafen",
   // ToggleMute = "toggleMute",
   // TogglePushToTalk = "togglePushToTalk",
   // ToggleAutoThreshold = "toggleAutoThreshold",
@@ -140,6 +140,14 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleDeafen]: new ButtonType(DiscordButton.ToggleDeafen, {
+        name: "Toggle deafen",
+        active: Boolean(this.settings.deaf),
+      }).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          deaf: !this.settings?.deaf,
+        });
+      }),
       [DiscordButton.ToggleSilenceWarning]: new ButtonType(
         DiscordButton.ToggleSilenceWarning,
         {
@@ -321,6 +329,8 @@ export class DiscordApi {
 
       this.buttons[DiscordButton.ToggleSilenceWarning].active =
         boolSettings.silenceWarning;
+
+      this.buttons[DiscordButton.ToggleDeafen].active = boolSettings.deaf;
     }
 
     if (this.faders) {
