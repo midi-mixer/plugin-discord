@@ -7,7 +7,7 @@ enum DiscordButton {
   ToggleEchoCancellation = "toggleEchoCancellation",
   ToggleNoiseSuppression = "toggleNoiseSuppression",
   ToggleQos = "toggleQos",
-  // ToggleSilenceWarning = "toggleSilenceWarning",
+  ToggleSilenceWarning = "toggleSilenceWarning",
   // ToggleDeafen = "toggleDeafen",
   // ToggleMute = "toggleMute",
   // TogglePushToTalk = "togglePushToTalk",
@@ -140,6 +140,23 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleSilenceWarning]: new ButtonType(
+        DiscordButton.ToggleSilenceWarning,
+        {
+          name: "Toggle muted mic warning",
+          active: Boolean(
+            this.settings.silenceWarning ??
+              (this.settings as any).silence_warning
+          ),
+        }
+      ).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          silenceWarning: !(
+            this.settings?.silenceWarning ??
+            (this.settings as any).silence_warning
+          ),
+        });
+      }),
       [DiscordButton.ToggleQos]: new ButtonType(DiscordButton.ToggleQos, {
         name: "Toggle QoS",
         active: Boolean(this.settings.qos),
@@ -301,6 +318,9 @@ export class DiscordApi {
         boolSettings.noiseSuppression;
 
       this.buttons[DiscordButton.ToggleQos].active = boolSettings.qos;
+
+      this.buttons[DiscordButton.ToggleSilenceWarning].active =
+        boolSettings.silenceWarning;
     }
 
     if (this.faders) {
