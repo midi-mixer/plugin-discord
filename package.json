@@ -1,6 +1,7 @@
 {
   "name": "com.midi-mixer.discord",
   "version": "0.0.0-development",
+  "private": true,
   "description": "A Discord plugin for MIDI Mixer.",
   "files": [
     "icon.svg",
@@ -12,11 +13,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "pack": "rimraf ./*.tgz && rimraf ./*.midiMixerPlugin && npm pack && npx ts-node scripts/rename-package.ts",
-    "semantic-release": "semantic-release",
-    "postversion": "npx ts-node scripts/bump-manifest.ts && npm run pack"
+    "semantic-release": "semantic-release"
   },
   "license": "ISC",
   "devDependencies": {
+    "@semantic-release/exec": "^5.0.0",
     "@semantic-release/git": "^9.0.0",
     "@types/discord-rpc": "^3.0.5",
     "@types/node": "^15.12.1",
