@@ -4,7 +4,7 @@ import { config, Keys } from "./config";
 
 enum DiscordButton {
   ToggleAutomaticGainControl = "toggleAutomaticGainControl",
-  // ToggleEchoCancellation = "toggleEchoCancellation",
+  ToggleEchoCancellation = "toggleEchoCancellation",
   // ToggleNoiseSuppression = "toggleNoiseSuppression",
   // ToggleQos = "toggleQos",
   // ToggleSilenceWarning = "toggleSilenceWarning",
@@ -140,6 +140,23 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleEchoCancellation]: new ButtonType(
+        DiscordButton.ToggleEchoCancellation,
+        {
+          name: "Toggle echo cancellation",
+          active: Boolean(
+            this.settings.echoCancellation ??
+              (this.settings as any).echo_cancellation
+          ),
+        }
+      ).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          echoCancellation: !(
+            this.settings?.echoCancellation ??
+            (this.settings as any).echo_cancellation
+          ),
+        });
+      }),
       [DiscordButton.ToggleAutomaticGainControl]: new ButtonType(
         DiscordButton.ToggleAutomaticGainControl,
         {
@@ -244,17 +261,46 @@ export class DiscordApi {
 
   private async sync(settings?: VoiceSettings) {
     this.settings = settings ?? (await this.rpc.getVoiceSettings());
+    const boolSettings = this.normaliseSettings(this.settings);
+
+    console.log("Syncing settings from:", this.settings);
 
     if (this.buttons) {
-      this.buttons[
-        DiscordButton.ToggleAutomaticGainControl
-      ].active = this.settings.automaticGainControl;
+      this.buttons[DiscordButton.ToggleAutomaticGainControl].active =
+        boolSettings.automaticGainControl;
+
+      this.buttons[DiscordButton.ToggleEchoCancellation].active =
+        boolSettings.echoCancellation;
     }
 
     if (this.faders) {
       this.faders[DiscordFader.InputVolume].muted =
-        this.settings.mute || this.settings.deaf;
-      this.faders[DiscordFader.OutputVolume].muted = this.settings.deaf;
+        boolSettings.mute || boolSettings.deaf;
+
+      this.faders[DiscordFader.OutputVolume].muted = boolSettings.deaf;
     }
+  }
+
+  private normaliseSettings(
+    rawSettings: Record<string, any>
+  ): Omit<VoiceSettings, "input" | "output" | "mode"> {
+    return {
+      ...rawSettings,
+      automaticGainControl: Boolean(
+        rawSettings.automaticGainControl ?? rawSettings.automatic_gain_control
+      ),
+      deaf: Boolean(rawSettings.deaf),
+      echoCancellation: Boolean(
+        rawSettings.echoCancellation ?? rawSettings.echo_cancellation
+      ),
+      mute: Boolean(rawSettings.mute),
+      noiseSuppression: Boolean(
+        rawSettings.noiseSuppression ?? rawSettings.noise_suppression
+      ),
+      qos: Boolean(rawSettings.qos),
+      silenceWarning: Boolean(
+        rawSettings.silenceWarning ?? rawSettings.silence_warning
+      ),
+    };
   }
 }
