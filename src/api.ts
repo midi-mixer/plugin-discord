@@ -155,7 +155,7 @@ export class DiscordApi {
 
     this.faders = {
       [DiscordFader.InputVolume]: new Assignment(DiscordFader.InputVolume, {
-        name: "Input volume",
+        name: "Input device",
         muted: this.settings.mute,
         throttle: 150,
       })
@@ -188,7 +188,7 @@ export class DiscordApi {
           });
         }),
       [DiscordFader.OutputVolume]: new Assignment(DiscordFader.OutputVolume, {
-        name: "Output volume",
+        name: "Output device",
         muted: this.settings.deaf,
         throttle: 150,
       })

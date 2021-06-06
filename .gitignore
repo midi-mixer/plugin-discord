@@ -101,3 +101,9 @@ typings/
 
 # TernJS port file
 .tern-port
+
+# TypeScript output
+lib/
+
+# Plugin built output
+*.midiMixerPlugin
