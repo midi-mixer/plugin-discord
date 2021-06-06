@@ -5,7 +5,7 @@ import { config, Keys } from "./config";
 enum DiscordButton {
   ToggleAutomaticGainControl = "toggleAutomaticGainControl",
   ToggleEchoCancellation = "toggleEchoCancellation",
-  // ToggleNoiseSuppression = "toggleNoiseSuppression",
+  ToggleNoiseSuppression = "toggleNoiseSuppression",
   // ToggleQos = "toggleQos",
   // ToggleSilenceWarning = "toggleSilenceWarning",
   // ToggleDeafen = "toggleDeafen",
@@ -140,6 +140,23 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleNoiseSuppression]: new ButtonType(
+        DiscordButton.ToggleNoiseSuppression,
+        {
+          name: "Toggle noise reduction",
+          active: Boolean(
+            this.settings.noiseSuppression ??
+              (this.settings as any).noise_suppression
+          ),
+        }
+      ).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          noiseSuppression: !(
+            this.settings?.noiseSuppression ??
+            (this.settings as any).noise_suppression
+          ),
+        });
+      }),
       [DiscordButton.ToggleEchoCancellation]: new ButtonType(
         DiscordButton.ToggleEchoCancellation,
         {
@@ -271,6 +288,9 @@ export class DiscordApi {
 
       this.buttons[DiscordButton.ToggleEchoCancellation].active =
         boolSettings.echoCancellation;
+
+      this.buttons[DiscordButton.ToggleNoiseSuppression].active =
+        boolSettings.noiseSuppression;
     }
 
     if (this.faders) {
