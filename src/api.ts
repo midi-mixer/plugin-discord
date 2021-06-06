@@ -144,11 +144,17 @@ export class DiscordApi {
         DiscordButton.ToggleAutomaticGainControl,
         {
           name: "Toggle automatic gain control",
-          active: this.settings.automaticGainControl,
+          active: Boolean(
+            this.settings.automaticGainControl ??
+              (this.settings as any).automatic_gain_control
+          ),
         }
       ).on("pressed", async () => {
         await (this.rpc as any).setVoiceSettings({
-          automaticGainControl: !this.settings?.automaticGainControl,
+          automaticGainControl: !(
+            this.settings?.automaticGainControl ??
+            (this.settings as any).automatic_gain_control
+          ),
         });
       }),
     };
