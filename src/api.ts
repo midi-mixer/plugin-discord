@@ -144,9 +144,21 @@ export class DiscordApi {
         name: "Toggle mute",
         active: Boolean(this.settings.mute),
       }).on("pressed", async () => {
-        await (this.rpc as any).setVoiceSettings({
-          mute: !this.settings?.mute,
-        });
+        const currentState = Boolean(
+          this.settings?.mute || this.settings?.deaf
+        );
+        const muted = !currentState;
+
+        /**
+         * If we're unmuting our mic, make sure to undeafen too.
+         */
+        const args: Partial<VoiceSettings> = {
+          mute: muted,
+        };
+
+        if (!muted) args.deaf = muted;
+
+        await (this.rpc as any).setVoiceSettings(args);
       }),
       [DiscordButton.ToggleDeafen]: new ButtonType(DiscordButton.ToggleDeafen, {
         name: "Toggle deafen",
