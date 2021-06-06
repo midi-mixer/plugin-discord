@@ -6,7 +6,7 @@ enum DiscordButton {
   ToggleAutomaticGainControl = "toggleAutomaticGainControl",
   ToggleEchoCancellation = "toggleEchoCancellation",
   ToggleNoiseSuppression = "toggleNoiseSuppression",
-  // ToggleQos = "toggleQos",
+  ToggleQos = "toggleQos",
   // ToggleSilenceWarning = "toggleSilenceWarning",
   // ToggleDeafen = "toggleDeafen",
   // ToggleMute = "toggleMute",
@@ -140,6 +140,14 @@ export class DiscordApi {
       //     },
       //   });
       // }),
+      [DiscordButton.ToggleQos]: new ButtonType(DiscordButton.ToggleQos, {
+        name: "Toggle QoS",
+        active: Boolean(this.settings.qos),
+      }).on("pressed", async () => {
+        await (this.rpc as any).setVoiceSettings({
+          qos: !this.settings?.qos,
+        });
+      }),
       [DiscordButton.ToggleNoiseSuppression]: new ButtonType(
         DiscordButton.ToggleNoiseSuppression,
         {
@@ -291,6 +299,8 @@ export class DiscordApi {
 
       this.buttons[DiscordButton.ToggleNoiseSuppression].active =
         boolSettings.noiseSuppression;
+
+      this.buttons[DiscordButton.ToggleQos].active = boolSettings.qos;
     }
 
     if (this.faders) {
