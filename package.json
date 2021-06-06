@@ -13,7 +13,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "pack": "rimraf ./*.tgz && rimraf ./*.midiMixerPlugin && npm pack && npx ts-node scripts/rename-package.ts",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "postversion": "npx ts-node scripts/bump-manifest.ts && npm run pack"
   },
   "license": "ISC",
   "devDependencies": {
