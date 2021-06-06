@@ -348,7 +348,17 @@ export class DiscordApi {
       this.faders[DiscordFader.InputVolume].muted =
         boolSettings.mute || boolSettings.deaf;
 
+      if (this.settings.input) {
+        this.faders[DiscordFader.InputVolume].volume =
+          this.settings.input.volume / 100;
+      }
+
       this.faders[DiscordFader.OutputVolume].muted = boolSettings.deaf;
+
+      if (this.settings.output) {
+        this.faders[DiscordFader.OutputVolume].volume =
+          this.settings.output.volume / 200;
+      }
     }
   }
 
