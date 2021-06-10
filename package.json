@@ -12,9 +12,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "pack": "rimraf ./*.tgz && rimraf ./*.midiMixerPlugin && npm pack && npx ts-node scripts/rename-package.ts",
     "semantic-release": "semantic-release",
-    "postversion": "npx ts-node scripts/bump-manifest.ts && npm run pack"
+    "postversion": "npx ts-node scripts/bump-manifest.ts && midi-mixer pack"
   },
   "license": "ISC",
   "devDependencies": {
@@ -28,8 +27,8 @@
     "eslint-config-prettier": "^7.2.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.3.1",
+    "midi-mixer-cli": "^1.0.1",
     "prettier": "^2.2.1",
-    "rimraf": "^3.0.2",
     "semantic-release": "^17.4.3",
     "typescript": "^4.1.3"
   },
