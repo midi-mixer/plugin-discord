@@ -1,7 +1,3 @@
-# This plugin is public but not compatible with the current MIDI Mixer release; check out alpha/beta access in-app for early access.
-
----
-
 # Discord Plugin
 
 A proof-of-concept plugin that provides very basic Discord integration.
