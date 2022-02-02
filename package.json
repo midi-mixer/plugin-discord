@@ -19,7 +19,7 @@
   "devDependencies": {
     "@semantic-release/exec": "^5.0.0",
     "@semantic-release/git": "^9.0.0",
-    "@types/discord-rpc": "^3.0.5",
+    "@types/discord-rpc": "^4",
     "@types/node": "^15.12.1",
     "@typescript-eslint/eslint-plugin": "^4.14.2",
     "@typescript-eslint/parser": "^4.14.2",
@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "conf": "^10.0.1",
-    "discord-rpc": "^3.2.0",
+    "discord-rpc": "^4.0.1",
     "midi-mixer-plugin": "^0.3.0"
   },
   "bundledDependencies": [
