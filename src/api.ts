@@ -116,16 +116,25 @@ export class DiscordApi {
       }
     }
 
-    this.rpc.subscribe("VOICE_SETTINGS_UPDATE", (data: VoiceSettings) => {
-      console.log("VOICE_SETTINGS_UPDATE event triggered");
-      this.sync(data);
-    });
-
-    this.rpc.subscribe("VOICE_CONNECTION_STATUS", (data: any) => {
+    /**
+      * our own libs are well-typed. the 4.x TotallyTyped declarations have lagged (at least for .on and .subscribe signatures)
+      * so to force compilation (until fixed upstream), let ts ignore the .on and .subscribe lines (badbadnotgood)
+    */
+    // @ts-ignore
+    this.rpc.on("VOICE_CONNECTION_STATUS", (data: any) => {
       console.log("VOICE_CONNECTION_STATUS event triggered");
       this.syncRunning(data);
     });
-
+    // @ts-ignore
+    this.rpc.on("VOICE_SETTINGS_UPDATE", (data: VoiceSettings) => {
+      console.log("VOICE_SETTINGS_UPDATE event triggered");
+      this.sync(data);
+    });
+    
+    // @ts-ignore
+    this.rpc.subscribe("VOICE_CONNECTION_STATUS", {}); 
+    // @ts-ignore
+    this.rpc.subscribe("VOICE_SETTINGS_UPDATE", {}); 
 
     $MM.setSettingsStatus("status", "Syncing voice settings...");
     this.settings = await this.rpc.getVoiceSettings();
