@@ -26,6 +26,7 @@ export class DiscordApi {
     "rpc.activities.write",
     "rpc.voice.read",
     "rpc.voice.write",
+    "rpc.notifications.read",
   ];
   private static syncGap = 1000 * 30;
 
@@ -116,8 +117,15 @@ export class DiscordApi {
     }
 
     this.rpc.subscribe("VOICE_SETTINGS_UPDATE", (data: VoiceSettings) => {
+      console.log("VOICE_SETTINGS_UPDATE event triggered");
       this.sync(data);
     });
+
+    this.rpc.subscribe("VOICE_CONNECTION_STATUS", (data: any) => {
+      console.log("VOICE_CONNECTION_STATUS event triggered");
+      this.syncRunning(data);
+    });
+
 
     $MM.setSettingsStatus("status", "Syncing voice settings...");
     this.settings = await this.rpc.getVoiceSettings();
@@ -328,6 +336,26 @@ export class DiscordApi {
 
     config.set(Keys.AuthToken, accessToken);
   }
+
+  private async syncRunning(data?: any) {
+    /**
+     * RPC client ain't really best at getting current connection status, so just
+     * wait for subs to tell us state 
+     */
+    console.log("Syncing voice connection status from: ", data);
+    if (!this.faders) return; 
+
+    if (!data.state) {
+      console.log("No state given!?")
+      return; 
+    };
+
+    const connected = data.state == "VOICE_CONNECTED";
+    this.faders[DiscordFader.InputVolume].running = connected;
+    this.faders[DiscordFader.OutputVolume].running = connected;
+
+    console.log("Finished syncing voice connection status from: ", data);
+  };
 
   private async sync(settings?: VoiceSettings) {
     this.settings = settings ?? (await this.rpc.getVoiceSettings());

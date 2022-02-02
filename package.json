@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "conf": "^10.0.1",
-    "discord-rpc": "^3.2.0",
+    "discord-rpc": "github:majorsimon/RPC",
     "midi-mixer-plugin": "^0.3.0"
   },
   "bundledDependencies": [
